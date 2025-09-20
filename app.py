@@ -1,20 +1,28 @@
 import gradio as gr
+from fastapi import FastAPI
 import torch
 from diffusers import StableDiffusionPipeline
 import os
 from datetime import datetime
 import uuid
+import uvicorn
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="AI Image Generator",
+    description="Generate stunning images from text descriptions using Stable Diffusion",
+    version="1.0.0"
+)
 
 # Initialize the Stable Diffusion pipeline
 def load_model():
     """Load the Stable Diffusion model"""
     try:
         pipe = StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4",
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+            "runwayml/stable-diffusion-v1-5",
+            torch_dtype=torch.float16
         )
-        if torch.cuda.is_available():
-            pipe = pipe.to("cuda")
+        pipe = pipe.to("cuda" if torch.cuda.is_available() else "cpu")
         return pipe
     except Exception as e:
         print(f"Error loading model: {e}")
@@ -28,45 +36,40 @@ def generate_image(prompt, negative_prompt="", guidance_scale=7.5, num_inference
     global model
 
     if model is None:
-        with gr.Progress() as progress:
-            progress(0, desc="Loading model...")
-            model = load_model()
+        print("Loading model...")
+        model = load_model()
 
     if model is None:
         return None, "Error: Could not load the model. Please check your installation."
 
     try:
-        with gr.Progress() as progress:
-            progress(0, desc="Generating image...")
-            # Generate the image
-            image = model(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                guidance_scale=guidance_scale,
-                num_inference_steps=num_inference_steps,
-                width=width,
-                height=height
-            ).images[0]
+        # Generate the image
+        image = model(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            width=width,
+            height=height
+        ).images[0]
 
-            # Create output directory if it doesn't exist
-            output_dir = "generated_images"
-            os.makedirs(output_dir, exist_ok=True)
+        # Create output directory if it doesn't exist
+        output_dir = "generated_images"
+        os.makedirs(output_dir, exist_ok=True)
 
-            # Generate unique filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_id = str(uuid.uuid4())[:8]
-            filename = f"{timestamp}_{unique_id}.png"
-            filepath = os.path.join(output_dir, filename)
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"{timestamp}_{unique_id}.png"
+        filepath = os.path.join(output_dir, filename)
 
-            # Save the image
-            image.save(filepath)
+        # Save the image
+        image.save(filepath)
 
-            progress(1, desc="Image saved!")
-
-        return image, f"Image saved as: {filename}"
+        return image, f"✅ Image generated successfully! Saved as: {filename}"
 
     except Exception as e:
-        return None, f"Error generating image: {str(e)}"
+        return None, f"❌ Error generating image: {str(e)}"
 
 def clear_model():
     """Clear the model from memory"""
@@ -76,12 +79,12 @@ def clear_model():
         model = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-    return "Model cleared from memory"
+    return "🗑️ Model cleared from memory"
 
 # Create the Gradio interface
 with gr.Blocks(title="AI Image Generator", theme=gr.themes.Soft()) as interface:
     gr.Markdown("# 🎨 AI Image Generator")
-    gr.Markdown("Generate stunning images from text descriptions using Stable Diffusion")
+    gr.Markdown("Generate stunning images from text descriptions using Stable Diffusion v1.5")
 
     with gr.Row():
         with gr.Column(scale=2):
@@ -185,10 +188,24 @@ with gr.Blocks(title="AI Image Generator", theme=gr.themes.Soft()) as interface:
         label="Example Prompts"
     )
 
+# Mount Gradio app to FastAPI
+app = gr.mount_gradio_app(app, interface, path="/")
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "AI Image Generator API", "status": "running"}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "model_loaded": model is not None}
+
 if __name__ == "__main__":
-    interface.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False,
-        show_error=True
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=7860,
+        reload=True,
+        log_level="info"
     )

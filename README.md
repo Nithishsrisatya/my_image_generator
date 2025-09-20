@@ -1,6 +1,6 @@
 # 🎨 AI Image Generator
 
-A powerful web-based image generation application built with Gradio and Stable Diffusion. Generate stunning images from text descriptions with an intuitive interface.
+A powerful web-based image generation application built with FastAPI + Gradio and Stable Diffusion. Generate stunning images from text descriptions with an intuitive interface, ready for deployment on Vercel.
 
 ## ✨ Features
 
@@ -10,6 +10,8 @@ A powerful web-based image generation application built with Gradio and Stable D
 - **Real-time Progress**: Visual progress tracking during generation
 - **Image Gallery**: Automatically saves generated images with timestamps
 - **GPU Support**: Optimized for both CPU and GPU processing
+- **FastAPI Integration**: RESTful API endpoints for programmatic access
+- **Production Ready**: Built for deployment on Vercel and other cloud platforms
 - **Modern UI**: Clean, responsive interface built with Gradio
 
 ## 🚀 Quick Start
@@ -20,7 +22,7 @@ A powerful web-based image generation application built with Gradio and Stable D
 - At least 8GB RAM (16GB recommended)
 - NVIDIA GPU with CUDA support (optional, but recommended for faster generation)
 
-### Installation
+### Local Development
 
 1. **Clone the repository**
    ```bash
@@ -40,6 +42,49 @@ A powerful web-based image generation application built with Gradio and Stable D
 
 4. **Open your browser**
    Navigate to `http://localhost:7860` to access the web interface.
+
+### API Endpoints
+
+- **GET /** - Root endpoint with API information
+- **GET /health** - Health check endpoint
+- **GET /gradio** - Gradio web interface (mounted at root)
+
+### Vercel Deployment
+
+1. **Install Vercel CLI**
+   ```bash
+   npm install -g vercel
+   ```
+
+2. **Deploy to Vercel**
+   ```bash
+   vercel --prod
+   ```
+
+3. **Set Environment Variables** (in Vercel dashboard):
+   - Add any required environment variables for your deployment
+
+### Alternative Deployment Options
+
+#### Railway
+```bash
+pip install railway
+railway login
+railway deploy
+```
+
+#### Render
+1. Connect your GitHub repository to Render
+2. Select Python service
+3. Set build command: `pip install -r requirements.txt`
+4. Set start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+
+#### Heroku
+```bash
+heroku create your-app-name
+heroku buildpacks:add https://github.com/heroku/heroku-buildpack-python
+git push heroku main
+```
 
 ## 📖 Usage
 
